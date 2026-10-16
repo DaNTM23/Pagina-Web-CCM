@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --azul-vivo: #23a9e1;
+    --verde-vivo: #bcd63f;
+    --naranja: #fbb22f;
+    --naranja-oscuro: #e69705;
+    --azul: #187095;
+    --verde: #64962c;
+    --gris: #f5f7f9;
+    --texto: #16213a;
+    --borde: #e2e6ea;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--gris); color: var(--texto);
+  }
+  header.hero{
+    background:
+      radial-gradient(ellipse at 20% 30%, rgba(255,255,255,.9), transparent 55%),
+      repeating-linear-gradient(118deg, rgba(255,255,255,.65) 0px, rgba(255,255,255,.65) 2px, transparent 2px, transparent 34px),
+      linear-gradient(160deg, #eef1f4 0%, #f8f9fb 45%, #eceff2 100%);
+    padding: 26px 20px 30px; text-align:center; position:relative; overflow:hidden;
+  }
+  header.hero::before{
+    content:""; position:absolute; top:-46px; left:-46px;
+    width:130px; height:130px; border-radius:50%;
+    border:20px solid var(--naranja); opacity:.9;
+  }
+  header.hero::after{
+    content:""; position:absolute; bottom:-24px; right:-24px;
+    width:88px; height:88px; border-radius:50%;
+    border:13px solid var(--azul-vivo); opacity:.8;
+  }
+  header.hero h1{ margin:0; font-size:1.5rem; font-weight:800; color:var(--azul); position:relative; letter-spacing:-.01em; }
+  header.hero p{ margin:6px 0 0; color:#5b6b7a; font-size:.9rem; position:relative; }
+
+  .contenedor{ max-width:1100px; margin:22px auto 40px; padding:0 16px; }
+
+  .cargando{ text-align:center; padding:50px 20px; color:#7a8794; }
+  .error-msg{ background:#fbe7e7; color:#a12a2a; padding:14px 16px; border-radius:10px; font-size:.92rem; }
+
+  .panel{
+    background:#fff; border-radius:14px; padding:18px 20px; margin-bottom:18px;
+    box-shadow: 0 1px 2px rgba(15,35,50,.04), 0 10px 28px rgba(15,35,50,.08);
+  }
+  .panel h2{ margin:0 0 14px; font-size:1rem; color:var(--azul); }
+
+  .filtros{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; }
+  .filtros label{ display:block; font-size:.76rem; font-weight:700; color:#5b6b7a; margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em; }
+  .filtros select, .filtros input{
+    width:100%; padding:9px 10px; border:1px solid var(--borde); border-radius:8px;
+    font-size:.9rem; background:#fbfcfd; font-family:inherit; color:var(--texto);
+  }
+  .filtros select:focus, .filtros input:focus{ outline:none; border-color:var(--azul-vivo); box-shadow:0 0 0 3px rgba(35,169,225,.18); }
+  .btn-limpiar{
+    margin-top:12px; padding:9px 16px; border:1px solid var(--borde); background:#fff;
+    color:var(--azul); border-radius:8px; font-size:.85rem; font-weight:600; cursor:pointer; font-family:inherit;
+  }
+  .btn-limpiar:hover{ background:var(--azul); color:#fff; }
+
+  .kpis{ display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:14px; margin-bottom:18px; }
+  .kpi{
+    background:#fff; border-radius:12px; padding:16px 18px;
+    box-shadow: 0 1px 2px rgba(15,35,50,.04), 0 8px 20px rgba(15,35,50,.07);
+  }
+  .kpi .etiqueta{ font-size:.74rem; color:#7a8794; text-transform:uppercase; letter-spacing:.04em; font-weight:700; }
+  .kpi .valor{ font-size:1.7rem; font-weight:800; margin-top:4px; color:var(--azul); }
+  .kpi.dinero .valor{ color:var(--verde); }
+  .kpi.alerta .valor{ color:var(--naranja-oscuro); }
+
+  .graficas{ display:grid; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:18px; }
+  .chart-box{ position:relative; height:300px; }
+
+  table{ width:100%; border-collapse:collapse; font-size:.86rem; }
+  th, td{ padding:9px 8px; text-align:left; border-bottom:1px solid var(--borde); }
+  th{ color:#5b6b7a; font-size:.74rem; text-transform:uppercase; letter-spacing:.03em; cursor:pointer; user-select:none; white-space:nowrap; }
+  th:hover{ color:var(--azul); }
+  tbody tr:hover{ background:#fafbfc; }
+  .tabla-scroll{ overflow-x:auto; max-height:460px; overflow-y:auto; }
+  .badge{ padding:2px 9px; border-radius:999px; font-size:.74rem; font-weight:700; white-space:nowrap; }
+  .badge.aprobado{ background:#e5f6ea; color:#1e6b34; }
+  .badge.no-aprobado{ background:#fbe7e7; color:#a12a2a; }
+  .badge.en-curso{ background:#eef4fa; color:var(--azul); }
+  .sin-datos{ text-align:center; color:#98a4ae; padding:26px; font-size:.9rem; }
+
+  .btn-res{
+    border:1px solid var(--borde); background:#fff; color:#5b6b7a;
+    font-size:.72rem; font-weight:700; padding:3px 8px; border-radius:6px;
+    cursor:pointer; font-family:inherit; margin-right:3px;
+  }
+  .btn-res:hover{ border-color:var(--azul); color:var(--azul); }
+  .btn-res.ap:hover{ background:#e5f6ea; border-color:#1e6b34; color:#1e6b34; }
+  .btn-res.no:hover{ background:#fbe7e7; border-color:#a12a2a; color:#a12a2a; }
+  .btn-res:disabled{ opacity:.5; cursor:wait; }
+  .celda-acciones{ white-space:nowrap; }
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:#16213a; color:#fff; padding:11px 20px; border-radius:8px;
+    font-size:.85rem; box-shadow:0 8px 24px rgba(0,0,0,.25); display:none; z-index:99;
+  }
+  .toast.visible{ display:block; }
+  .toast.error{ background:#a12a2a; }
+
+  .acciones{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  .acciones button, .acciones a{
+    padding:10px 16px; border-radius:8px; font-size:.86rem; font-weight:600;
+    cursor:pointer; font-family:inherit; text-decoration:none; display:inline-block;
+  }
+  .btn-csv{ background:linear-gradient(120deg, var(--naranja), var(--naranja-oscuro)); color:#fff; border:none; }
+  .btn-hoja{ background:#fff; color:var(--azul); border:1px solid var(--borde); }
+  .btn-hoja:hover{ background:var(--azul); color:#fff; }
+  footer{ text-align:center; color:#8a97a3; font-size:.78rem; padding:16px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>Reporte de Inscripciones CCM</h1>
+  <p id="subtitulo">Cargando datos…</p>
+</header>
+
+<div class="contenedor">
+  <div class="cargando" id="cargando">Cargando registros…</div>
+  <div id="app" style="display:none;">
+
+    <div class="panel">
+      <h2>Filtros</h2>
+      <div class="filtros">
+        <div>
+          <label for="fAnio">Año</label>
+          <select id="fAnio"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label for="fMes">Mes</label>
+          <select id="fMes"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label for="fNivel">Nivel</label>
+          <select id="fNivel"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label for="fCurso">Curso</label>
+          <select id="fCurso"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label for="fResultado">Resultado</label>
+          <select id="fResultado"><option value="">Todos</option></select>
+        </div>
+        <div>
+          <label for="fAlumno">Buscar alumno</label>
+          <input type="text" id="fAlumno" placeholder="Nombre o correo">
+        </div>
+      </div>
+      <button class="btn-limpiar" id="btnLimpiar">Limpiar filtros</button>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="panel">
+      <h2>Gráficas</h2>
+      <div class="graficas">
+        <div class="chart-box"><canvas id="chartCurso"></canvas></div>
+        <div class="chart-box"><canvas id="chartNivel"></canvas></div>
+        <div class="chart-box"><canvas id="chartMes"></canvas></div>
+        <div class="chart-box"><canvas id="chartResultado"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Detalle <span id="conteoTabla" style="color:#98a4ae;font-weight:400;"></span></h2>
+      <div class="tabla-scroll">
+        <table id="tabla">
+          <thead>
+            <tr>
+              <th data-col="fechaTexto">Fecha</th>
+              <th data-col="nombre">Alumno</th>
+              <th data-col="correo">Correo</th>
+              <th data-col="nivel">Nivel</th>
+              <th data-col="curso">Curso</th>
+              <th data-col="precio">Monto</th>
+              <th data-col="resultado">Resultado</th>
+              <th data-col="folio">Folio</th>
+              <th>Marcar resultado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="acciones">
+        <button class="btn-csv" id="btnCsv">Descargar CSV (lo filtrado)</button>
+        <a class="btn-hoja" id="btnHoja" href="#" target="_blank">Abrir hoja de cálculo</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>Reporte privado · CCM</footer>
+
+<script>
+  // ⚠️ SOLO VISTA PREVIA
+  const TOKEN = "demo";
+    const URL_APP = "#";
+
+  const MESES = ['', 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const COLORES = ['#23a9e1','#bcd63f','#fbb22f','#187095','#64962c','#e69705','#6cc5ea','#d3e57a','#fcc768','#2f9ae0'];
+
+  let REGISTROS = [];
+  let ordenCol = 'fechaTexto';
+  let ordenAsc = false;
+  const charts = {};
+
+  function escapeHtml(t){
+    const d = document.createElement('div');
+    d.textContent = t == null ? '' : t;
+    return d.innerHTML;
+  }
+
+  function claseResultado(r){
+    const x = (r||'').toLowerCase();
+    if (x.indexOf('no aprobado') !== -1) return 'no-aprobado';
+    if (x.indexOf('aprobado') !== -1) return 'aprobado';
+    return 'en-curso';
+  }
+
+  // ---- Carga inicial ----
+  // ---- SOLO VISTA PREVIA: datos simulados ----
+  (function(){
+    const nombres = [
+      ['Daniel Trevino','daniel@correo.com'], ['Maria Lopez','maria@correo.com'],
+      ['Jose Ramirez','jose@correo.com'], ['Ana Gutierrez','ana@correo.com'],
+      ['Pedro Sanchez','pedro@correo.com'], ['Lucia Mendez','lucia@correo.com'],
+      ['Carlos Nunez','carlos@correo.com'], ['Rosa Diaz','rosa@correo.com']
+    ];
+    const cat = [
+      ['Nivel 1', ['Identidad','Proposito','Caracter','Vision','Recursos','Destino']],
+      ['Nivel 2', ['Siervo Aprobado','Siervo Prospero','Siervo Sano','Siervo y Su Voz','Siervo y el Reino','Siervo y Su Dios']],
+      ['Nivel 3', ['Liderazgo 1','Trabajo en Equipo','Formacion','Planeacion','Cultura']]
+    ];
+    const resultados = ['Aprobado','Aprobado','Aprobado','No aprobado','En curso','En curso'];
+    const demo = [];
+    let n = 1;
+    for (let i = 0; i < 46; i++) {
+      const p = nombres[i % nombres.length];
+      const nivel = cat[i % 3];
+      const curso = nivel[1][i % nivel[1].length];
+      const mes = 1 + (i % 8);
+      const anio = i < 30 ? 2026 : 2025;
+      demo.push({
+        folio: 'CCM-DEMO-' + String(n++).padStart(3,'0'),
+        fechaTexto: String(1 + (i % 27)).padStart(2,'0') + '/' + String(mes).padStart(2,'0') + '/' + anio,
+        anio: anio, mes: mes,
+        correo: p[1], nombre: p[0],
+        nivel: nivel[0], curso: curso,
+        precio: 100, estado: 'Inscrito',
+        resultado: resultados[i % resultados.length]
+      });
+    }
+    setTimeout(function(){
+      document.getElementById('cargando').style.display = 'none';
+      REGISTROS = demo;
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('subtitulo').textContent =
+        '(Vista previa con datos de ejemplo) ' + REGISTROS.length + ' registros';
+      poblarFiltros();
+      aplicar();
+    }, 300);
+  })();
+
+  function unicos(campo){
+    const s = new Set();
+    REGISTROS.forEach(r => { if (r[campo] !== null && r[campo] !== '') s.add(r[campo]); });
+    return Array.from(s);
+  }
+
+  function poblarFiltros(){
+    const anios = unicos('anio').sort((a,b) => b - a);
+    const selAnio = document.getElementById('fAnio');
+    anios.forEach(a => selAnio.add(new Option(a, a)));
+
+    const meses = unicos('mes').sort((a,b) => a - b);
+    const selMes = document.getElementById('fMes');
+    meses.forEach(m => selMes.add(new Option(MESES[m], m)));
+
+    const selNivel = document.getElementById('fNivel');
+    unicos('nivel').sort().forEach(n => selNivel.add(new Option(n, n)));
+
+    const selCurso = document.getElementById('fCurso');
+    unicos('curso').sort().forEach(c => selCurso.add(new Option(c, c)));
+
+    const selRes = document.getElementById('fResultado');
+    unicos('resultado').sort().forEach(r => selRes.add(new Option(r, r)));
+
+    ['fAnio','fMes','fNivel','fCurso','fResultado'].forEach(id => {
+      document.getElementById(id).onchange = aplicar;
+    });
+    document.getElementById('fAlumno').oninput = aplicar;
+    document.getElementById('btnLimpiar').onclick = function(){
+      ['fAnio','fMes','fNivel','fCurso','fResultado'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('fAlumno').value = '';
+      aplicar();
+    };
+
+    document.querySelectorAll('#tabla th').forEach(th => {
+      th.onclick = function(){
+        const col = th.getAttribute('data-col');
+        if (ordenCol === col) { ordenAsc = !ordenAsc; } else { ordenCol = col; ordenAsc = true; }
+        aplicar();
+      };
+    });
+
+    document.getElementById('btnCsv').onclick = descargarCsv;
+  }
+
+  function filtrar(){
+    const anio = document.getElementById('fAnio').value;
+    const mes = document.getElementById('fMes').value;
+    const nivel = document.getElementById('fNivel').value;
+    const curso = document.getElementById('fCurso').value;
+    const resultado = document.getElementById('fResultado').value;
+    const texto = document.getElementById('fAlumno').value.trim().toLowerCase();
+
+    return REGISTROS.filter(function(r){
+      if (anio && String(r.anio) !== anio) return false;
+      if (mes && String(r.mes) !== mes) return false;
+      if (nivel && r.nivel !== nivel) return false;
+      if (curso && r.curso !== curso) return false;
+      if (resultado && r.resultado !== resultado) return false;
+      if (texto) {
+        const enNombre = (r.nombre || '').toLowerCase().indexOf(texto) !== -1;
+        const enCorreo = (r.correo || '').toLowerCase().indexOf(texto) !== -1;
+        if (!enNombre && !enCorreo) return false;
+      }
+      return true;
+    });
+  }
+
+  function agrupar(datos, campo){
+    const mapa = {};
+    datos.forEach(function(r){
+      const k = r[campo] || '(sin dato)';
+      if (!mapa[k]) mapa[k] = { registros: 0, monto: 0 };
+      mapa[k].registros++;
+      mapa[k].monto += r.precio;
+    });
+    return mapa;
+  }
+
+  function pintarChart(id, tipo, labels, valores, titulo, colores){
+    if (charts[id]) charts[id].destroy();
+    const ctx = document.getElementById(id).getContext('2d');
+    charts[id] = new Chart(ctx, {
+      type: tipo,
+      data: {
+        labels: labels,
+        datasets: [{
+          label: titulo,
+          data: valores,
+          backgroundColor: colores || labels.map((_, i) => COLORES[i % COLORES.length]),
+          borderRadius: tipo === 'bar' ? 6 : 0,
+          borderWidth: tipo === 'doughnut' ? 2 : 0,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: titulo, color: '#187095', font: { size: 13, weight: 'bold' } },
+          legend: { display: tipo === 'doughnut', position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+        },
+        scales: tipo === 'bar' ? {
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+          x: { ticks: { font: { size: 10 }, maxRotation: 60, minRotation: 0 } }
+        } : {}
+      }
+    });
+  }
+
+  function aplicar(){
+    const datos = filtrar();
+
+    // ---- KPIs ----
+    const alumnosUnicos = new Set(datos.map(r => r.correo)).size;
+    const monto = datos.reduce((s, r) => s + r.precio, 0);
+    const aprobados = datos.filter(r => claseResultado(r.resultado) === 'aprobado').length;
+    const enCurso = datos.filter(r => claseResultado(r.resultado) === 'en-curso').length;
+
+    document.getElementById('kpis').innerHTML = `
+      <div class="kpi"><div class="etiqueta">Registros</div><div class="valor">${datos.length}</div></div>
+      <div class="kpi"><div class="etiqueta">Alumnos únicos</div><div class="valor">${alumnosUnicos}</div></div>
+      <div class="kpi dinero"><div class="etiqueta">Monto</div><div class="valor">$${monto.toLocaleString('es-MX')}</div></div>
+      <div class="kpi"><div class="etiqueta">Aprobados</div><div class="valor">${aprobados}</div></div>
+      <div class="kpi alerta"><div class="etiqueta">En curso</div><div class="valor">${enCurso}</div></div>
+    `;
+
+    // ---- Gráficas ----
+    const porCurso = agrupar(datos, 'curso');
+    const cursosOrd = Object.keys(porCurso).sort((a,b) => porCurso[b].registros - porCurso[a].registros);
+    pintarChart('chartCurso', 'bar', cursosOrd, cursosOrd.map(c => porCurso[c].registros), 'Inscripciones por curso');
+
+    const porNivel = agrupar(datos, 'nivel');
+    const nivelesOrd = Object.keys(porNivel).sort();
+    pintarChart('chartNivel', 'doughnut', nivelesOrd, nivelesOrd.map(n => porNivel[n].registros), 'Distribución por nivel');
+
+    // Por mes (ordenado cronológicamente)
+    const porMes = {};
+    datos.forEach(function(r){
+      if (!r.anio || !r.mes) return;
+      const k = r.anio + '-' + String(r.mes).padStart(2,'0');
+      if (!porMes[k]) porMes[k] = 0;
+      porMes[k]++;
+    });
+    const mesesOrd = Object.keys(porMes).sort();
+    const etiquetasMes = mesesOrd.map(function(k){
+      const p = k.split('-');
+      return MESES[Number(p[1])].substring(0,3) + ' ' + p[0];
+    });
+    pintarChart('chartMes', 'bar', etiquetasMes, mesesOrd.map(k => porMes[k]), 'Inscripciones por mes',
+      mesesOrd.map(() => '#23a9e1'));
+
+    const porResultado = agrupar(datos, 'resultado');
+    const resOrd = Object.keys(porResultado).sort();
+    pintarChart('chartResultado', 'doughnut', resOrd, resOrd.map(r => porResultado[r].registros), 'Por resultado',
+      resOrd.map(function(r){
+        const c = claseResultado(r);
+        return c === 'aprobado' ? '#64962c' : (c === 'no-aprobado' ? '#d9534f' : '#23a9e1');
+      }));
+
+    // ---- Tabla ----
+    const ordenados = datos.slice().sort(function(a,b){
+      let va = a[ordenCol], vb = b[ordenCol];
+      if (ordenCol === 'precio') { va = Number(va); vb = Number(vb); }
+      else { va = (va||'').toString().toLowerCase(); vb = (vb||'').toString().toLowerCase(); }
+      if (va < vb) return ordenAsc ? -1 : 1;
+      if (va > vb) return ordenAsc ? 1 : -1;
+      return 0;
+    });
+
+    document.getElementById('conteoTabla').textContent = '(' + ordenados.length + ')';
+    const tbody = document.getElementById('tbody');
+    if (ordenados.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" class="sin-datos">No hay registros con esos filtros.</td></tr>';
+    } else {
+      tbody.innerHTML = ordenados.map(r => `
+        <tr>
+          <td>${escapeHtml(r.fechaTexto)}</td>
+          <td>${escapeHtml(r.nombre)}</td>
+          <td>${escapeHtml(r.correo)}</td>
+          <td>${escapeHtml(r.nivel)}</td>
+          <td>${escapeHtml(r.curso)}</td>
+          <td>$${r.precio}</td>
+          <td><span class="badge ${claseResultado(r.resultado)}">${escapeHtml(r.resultado)}</span></td>
+          <td style="color:#98a4ae;font-size:.8rem;">${escapeHtml(r.folio)}</td>
+          <td class="celda-acciones">
+            <button class="btn-res ap" data-folio="${escapeHtml(r.folio)}" data-res="Aprobado">Aprobó</button>
+            <button class="btn-res no" data-folio="${escapeHtml(r.folio)}" data-res="No aprobado">No aprobó</button>
+            <button class="btn-res" data-folio="${escapeHtml(r.folio)}" data-res="En curso">En curso</button>
+          </td>
+        </tr>
+      `).join('');
+      conectarBotonesResultado();
+    }
+  }
+
+  function mostrarToast(msg, esError){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast visible' + (esError ? ' error' : '');
+    setTimeout(function(){ t.className = 'toast'; }, 2600);
+  }
+
+  function conectarBotonesResultado(){
+    document.querySelectorAll('.btn-res').forEach(function(btn){
+      btn.onclick = function(){
+        const folio = btn.getAttribute('data-folio');
+        const nuevoRes = btn.getAttribute('data-res');
+        const fila = document.querySelectorAll('.btn-res[data-folio="' + folio + '"]');
+        fila.forEach(b => b.disabled = true);
+
+        // ---- SOLO VISTA PREVIA: normalmente llama a marcarResultado(TOKEN, folio, nuevoRes)
+        setTimeout(function(){
+          fila.forEach(b => b.disabled = false);
+          const reg = REGISTROS.find(r => r.folio === folio);
+          if (reg) reg.resultado = nuevoRes;
+          mostrarToast('(Vista previa) Guardado: ' + nuevoRes);
+          aplicar();
+        }, 250);
+      };
+    });
+  }
+
+  function descargarCsv(){
+    const datos = filtrar();
+    const encabezados = ['Fecha','Alumno','Correo','Nivel','Curso','Monto','Resultado','Folio'];
+    const filas = datos.map(r => [r.fechaTexto, r.nombre, r.correo, r.nivel, r.curso, r.precio, r.resultado, r.folio]);
+    const csv = [encabezados].concat(filas)
+      .map(fila => fila.map(c => '"' + String(c == null ? '' : c).replace(/"/g,'""') + '"').join(','))
+      .join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'reporte-ccm.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+</script>
+</body>
+</html>
