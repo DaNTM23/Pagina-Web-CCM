@@ -1,0 +1,11 @@
+{
+  "name": "ccm-sistema",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema de cursos del Centro de Capacitacion Ministerial (Apps Script)",
+  "scripts": {
+    "revisar": "node -e \"const fs=require('fs'),os=require('os'),p=require('path');const t=p.join(os.tmpdir(),'ccm-check.js');fs.copyFileSync('apps-script/Code.gs',t);require('child_process').execFileSync(process.execPath,['--check',t],{stdio:'inherit'});console.log('Code.gs OK')\"",
+    "subir": "cd apps-script && clasp push",
+    "pruebas": "node pruebas/correr.js"
+  }
+}

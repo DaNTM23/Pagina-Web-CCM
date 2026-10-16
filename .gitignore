@@ -1,0 +1,29 @@
+# Credenciales de clasp — nunca se suben
+apps-script/.clasp.json
+.clasprc.json
+**/.clasprc.json
+
+# Variables de entorno y credenciales
+.env
+.env.*
+*.env
+credentials*.json
+client_secret*.json
+service-account*.json
+*.pem
+*.key
+
+# Dependencias y archivos de build
+node_modules/
+dist/
+build/
+.cache/
+coverage/
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.log
