@@ -1,0 +1,14 @@
+{
+  "name": "ccm",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": ".svelte-kit/cloudflare/_worker.js",
+  "assets": { "binding": "ASSETS", "directory": ".svelte-kit/cloudflare" },
+  "d1_databases": [
+    // Reemplaza database_id con el que da: wrangler d1 create ccm
+    { "binding": "DB", "database_name": "ccm", "database_id": "PENDIENTE", "migrations_dir": "migrations" }
+  ],
+  "r2_buckets": [
+    { "binding": "COMPROBANTES", "bucket_name": "ccm-comprobantes" }
+  ]
+}
